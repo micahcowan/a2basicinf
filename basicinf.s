@@ -16,8 +16,10 @@ VARTAB = $69
 ARYTAB = $6B
 STREND = $6D
 FRETOP = $6F
-MEMSIZE= $73
+HIMEM  = $73
 PRGEND = $AF
+
+GARBAGE = $E484
 
 CROUT= $FD8E
 COUT = $FDED
@@ -25,22 +27,62 @@ PRNTAX=$F941
 
 .macpack apple2
 
-.macro mPrintMessageAndVal msg, val
-	lda #<msg
-        sta ARGPTR
-        lda #>msg
-        sta ARGPTR+1
-        jsr PrintMessage
-        ldy #val
-        jsr PrintWord
+.macro mPrintSubtraction arg1, arg2, saveSpot
+	jsr PrintImmediate
+        scrcode .string(arg1)
+        .repeat 7 - .strlen(.string(arg1))
+        scrcode " "
+        .endrepeat
+        scrcode "("
+        .byte 0
+        ldy #arg1
+        jsr PrintZpHexY
+	jsr PrintImmediate
+        scrcode ") - "
+        scrcode .string(arg2)
+        scrcode " ("
+        .byte 0
+        ldy #arg2
+        jsr PrintZpHexY
+	jsr PrintImmediate
+        scrcode ") = $"
+        .byte 0
+        lda arg1
+        sec
+        sbc arg2
+        tax
+        lda arg1+1
+        sbc arg2+1
+.ifnblank saveSpot
+	stx saveSpot
+        sta saveSpot+1
+.endif
+        jsr PRNTAX
+        jsr CROUT
 .endmacro
 
 .segment "BASICINF"
 
 BasicInf:
 	jsr CROUT
-	mPrintMessageAndVal msgTxttab, TXTTAB
-        mPrintMessageAndVal msgPrgend, PRGEND
+	mPrintSubtraction PRGEND, TXTTAB
+        lda #0
+        sta looped
+        mPrintSubtraction STREND, VARTAB, addOne
+@loop:
+        mPrintSubtraction HIMEM, FRETOP, addTwo
+        jsr PrintSum
+        lda looped
+        bne @afterLoop
+        jsr PrintImmediate
+        scrcode "- AFTER RUNNING GARBAGE COLLECT -", $0D
+        .byte 0
+        lda #1
+        sta looped
+        jsr GARBAGE
+        jmp @loop
+@afterLoop:
+        jsr CROUT
 .ifndef EXITTODOS
         rts
         nop
@@ -49,65 +91,64 @@ BasicInf:
 	jmp $3D0
 .endif
 
-msgTxttab:
-	scrcode "START OF PROG (TXTTAB) IS"
-        .byte $0
-msgPrgend:
-        scrcode "END OF PROG (PRGEND) IS"
-        .byte $0
-msgProgSz:
-	scrcode "PROGRAM CODE SIZE IS"
-        .byte $0
+addOne:
+	.word 0
+addTwo:
+	.word 0
+looped:
+	.byte 0
 
-msgVartab:
-        scrcode "START OF VARS (VARTAB) IS"
-        .byte $0
-msgStrend:
-	scrcode "END OF VARS (STREND) IS"
-        .byte $0
-msgVarSz:
-	scrcode "VAR NAMES/ARRAYS SIZE IS"
-        .byte $0
-
-msgHimem:
-        scrcode "END OF DATA (HIMEM) IS"
-        .byte $0
-msgFretop:
-	scrcode "STRING SPACE USED DOWN TO (FRETOP)"
-        .byte $0
-msgStrSz:
-	scrcode "STRINGS USED SPACE IS"
-        .byte $0
-msgDataSz:
-	scrcode "TOTAL VAR/STR SIZE IS"
-        .byte $0
-
-; Word to be printed is in $0,y
-PrintWord:
-        lda #27
-        sta CURSH
-        lda #$A4
-        jsr COUT
-	lda $0,y
-        sta ARGPTR
-        iny
-        lda $0,y
-        sta ARGPTR+1
-        ldx ARGPTR
+PrintSum:
+	jsr PrintImmediate
+        scrcode "  $"
+        .byte 0
+        ldx addOne
+        lda addOne+1
         jsr PRNTAX
-        
-        lda #$A0
-        jsr COUT
-        lda #$A8
-        jsr COUT
-        ldy ARGPTR
-        lda ARGPTR+1
-        jsr prDec16u_AY
-        lda #$A9
-        jsr COUT
+        jsr PrintImmediate
+        scrcode " + $"
+        .byte 0
+        ldx addTwo
+        lda addTwo+1
+        jsr PRNTAX
+        jsr PrintImmediate
+        scrcode " = $"
+        .byte 0
+        lda addOne
+        clc
+        adc addTwo
+        tax
+        lda addOne+1
+        adc addTwo+1
+        jsr PRNTAX
         jsr CROUT
-        rts
-        
+	rts
+
+PrintZpHexY:
+	lda #$A4
+        jsr COUT
+	ldx $0,y
+        lda $1,y
+        jsr PRNTAX
+	rts
+
+; Print a NUL-term'd string that occurs IMMEDIATELY after
+; the call to this subroutine, and return wpast it.
+PrintImmediate:
+	clc
+	pla
+        adc #1
+        sta ARGPTR
+        pla
+        adc #0
+        sta ARGPTR+1
+        jsr PrintMessage
+        lda ARGPTR+1
+        pha
+        lda ARGPTR
+        pha
+	rts
+
 PrintMessage:
 	ldy #0
 @SkipLDY:
