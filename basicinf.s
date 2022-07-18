@@ -65,7 +65,7 @@ PRNTAX=$F941
 
 BasicInf:
 	jsr CROUT
-	mPrintSubtraction PRGEND, TXTTAB
+	mPrintSubtraction PRGEND, TXTTAB, progSize
         lda #0
         sta looped
         mPrintSubtraction STREND, VARTAB, addOne
@@ -83,6 +83,55 @@ BasicInf:
         jmp @loop
 @afterLoop:
         jsr CROUT
+        jsr PrintImmediate
+        scrcode "YOUR PROGRAM CODE TAKES UP "
+        .byte 0
+        ldy progSize
+        lda progSize+1
+        jsr prDec16u_AY
+        lda #32
+        sta CURSH
+        jsr PrBytesWord
+        jsr CROUT
+        jsr PrintImmediate
+        scrcode "       OUT OF AN AVAILABLE "
+        .byte 0
+        lda HIMEM
+        sec
+        sbc TXTTAB
+        tay
+        lda HIMEM+1
+        sbc TXTTAB+1
+        jsr prDec16u_AY
+        lda #32
+        sta CURSH
+        jsr PrBytesWord
+        jsr PrintImmediate
+        scrcode $0D, $0D, "ON YOUR LAST RUN, THIS PROGRAM", $0D
+	scrcode "USED XXXXX"
+        .byte $0
+        lda #10
+        sta CURSH
+        jsr PrBytesWord
+        jsr PrintImmediate
+        scrcode " FOR VARIABLE AND ARRAY", $0D
+	scrcode "TABLES, AND XXXXX"
+        .byte 0
+        lda #17
+        sta CURSH
+        jsr PrBytesWord
+        jsr PrintImmediate
+        scrcode " FOR STRING", $0D
+	scrcode "STORAGE, WHICH CAME TO XXXXX"
+        .byte 0
+        lda #28
+        sta CURSH
+        jsr PrBytesWord
+        jsr CROUT
+        jsr PrintImmediate
+	scrcode "AFTER THROWING AWAY TEMPORARY STRINGS.", $0D
+	.byte $0
+        jsr CROUT
 .ifndef EXITTODOS
         rts
         nop
@@ -95,8 +144,16 @@ addOne:
 	.word 0
 addTwo:
 	.word 0
+progSize:
+	.word 0
 looped:
 	.byte 0
+
+PrBytesWord:
+	jsr PrintImmediate
+        scrcode " BYTES"
+        .byte 0
+        rts
 
 PrintSum:
 	jsr PrintImmediate
