@@ -69,11 +69,28 @@ BasicInf:
         lda #0
         sta looped
         mPrintSubtraction STREND, VARTAB, addOne
+        lda addOne
+        sta varSpace
+        lda addOne+1
+        sta varSpace+1
 @loop:
         mPrintSubtraction HIMEM, FRETOP, addTwo
         jsr PrintSum
         lda looped
-        bne @afterLoop
+        beq @gonnaLoop
+        ; save the garbage-collected value away and exit the loop
+        lda addTwo
+        sta afterGarbage
+        lda addTwo+1
+        sta afterGarbage+1
+        jmp @afterLoop
+@gonnaLoop:
+	; save the used string space away and loop around
+        ; for the garbage-collected version
+        lda addTwo
+        sta strSpace
+        lda addTwo+1
+        sta strSpace+1
         jsr PrintImmediate
         scrcode "- AFTER RUNNING GARBAGE COLLECT -", $0D
         .byte 0
@@ -106,24 +123,45 @@ BasicInf:
         lda #32
         sta CURSH
         jsr PrBytesWord
+        jsr CROUT
+        jsr PrintImmediate
+        scrcode "  LEAVING FOR VAR/STR DATA "
+        .byte 0
+        lda HIMEM
+        sec
+        sbc PRGEND
+        tay
+        lda HIMEM+1
+        sbc PRGEND+1
+        jsr prDec16u_AY
+        jsr PrBytesWord
         jsr PrintImmediate
         scrcode $0D, $0D, "ON YOUR LAST RUN, THIS PROGRAM", $0D
-	scrcode "USED XXXXX"
+	scrcode "USED "
         .byte $0
+        ldy varSpace
+        lda varSpace+1
+        jsr prDec16u_AY
         lda #10
         sta CURSH
         jsr PrBytesWord
         jsr PrintImmediate
         scrcode " FOR VARIABLE AND ARRAY", $0D
-	scrcode "TABLES, AND XXXXX"
+	scrcode "TABLES, AND "
         .byte 0
+        ldy strSpace
+        lda strSpace+1
+        jsr prDec16u_AY
         lda #17
         sta CURSH
         jsr PrBytesWord
         jsr PrintImmediate
         scrcode " FOR STRING", $0D
-	scrcode "STORAGE, WHICH CAME TO XXXXX"
+	scrcode "STORAGE, WHICH CAME TO "
         .byte 0
+        ldy afterGarbage
+        lda afterGarbage+1
+        jsr prDec16u_AY
         lda #28
         sta CURSH
         jsr PrBytesWord
@@ -146,6 +184,12 @@ addTwo:
 	.word 0
 progSize:
 	.word 0
+varSpace:
+	.word 0
+strSpace:
+	.word 0
+afterGarbage:
+	.word 0
 looped:
 	.byte 0
 
@@ -155,6 +199,7 @@ PrBytesWord:
         .byte 0
         rts
 
+; saves the result away to addTwo
 PrintSum:
 	jsr PrintImmediate
         scrcode "  $"
@@ -174,9 +219,11 @@ PrintSum:
         lda addOne
         clc
         adc addTwo
+        sta addTwo
         tax
         lda addOne+1
         adc addTwo+1
+        sta addTwo+1
         jsr PRNTAX
         jsr CROUT
 	rts
@@ -219,6 +266,10 @@ PrintMessage:
 @Done:
 	rts
 
+;
+; div10w_AY and prDec16u_AY come from my 6502 maths project at
+; https://github.com/micahcowan/math-ca65, commit 0aadf23
+;
 div10w_AY:
     ; initialize vars
     sta dividendH
