@@ -65,6 +65,14 @@ PRNTAX=$F941
 
 BasicInf:
 	jsr CROUT
+        ; This "PrintImmediate" style of message-printing
+        ; certainly makes reading/debugging with the system monitor
+        ; much more difficult than necessary, but it makes
+        ; macro-creation much easier to write, when you can just dump
+        ; a string directly in with the code.
+        jsr PrintImmediate
+        scrcode "HTTP://GITHUB.COM/MICAHCOWAN/A2BASICINF", $0D, $0D
+        .byte 0
 	mPrintSubtraction PRGEND, TXTTAB, progSize
         lda #0
         sta looped
