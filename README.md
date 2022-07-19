@@ -3,6 +3,8 @@ a2basicinf
 
 [Open (and edit!) this project in 8bitworkshop](http://8bitworkshop.com/dev/?platform=apple2&githubURL=https%3A%2F%2Fgithub.com%2Fmicahcowan%2Fa2basicinf&file=basicinf.s).
 
+**DOWNLOAD** the DOS 3.3 disk image [from the releases page](https://github.com/micahcowan/a2basicinf/releases/).
+
 Simple utility to print out useful information about how much space your AppleSoft program is using.
 Gets loaded in `$6000`, which may or may not be important space for your AppleSoft program, so be sure to save it before running BASICINF!
 
