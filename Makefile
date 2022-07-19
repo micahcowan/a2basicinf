@@ -12,7 +12,7 @@ HELLO: hello-basic.txt Makefile
 BASICINF: basicinf.o
 	ld65 --config build.cfg -o $@ basicinf.o
 
-.INTERMEDIATE: basicinf.o
+.SECONDARY: basicinf.o
 basicinf.o: basicinf.s Makefile
 	ca65 -D EXITTODOS --listing basicinf.list basicinf.s
 
